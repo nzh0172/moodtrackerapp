@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.util.*;
 import java.util.List;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -233,6 +235,20 @@ class ViewEntriesFrame extends JFrame {
 
         // Add Delete Button
         JButton deleteButton = new JButton("Delete Selected Entry");
+        
+     // Adjust the column widths
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        TableColumnModel columnModel = table.getColumnModel();
+        
+        // Auto-size all columns except Gratitude
+        for (int i = 0; i < columnModel.getColumnCount(); i++) {
+            if (i != 2) { // Skip the Gratitude column (index 2)
+                columnModel.getColumn(i).setPreferredWidth(90); // Adjust width for other columns
+            }
+        }
+
+        // Set a fixed width for the Gratitude column (index 2)
+        columnModel.getColumn(2).setPreferredWidth(400); // Set a larger width for Gratitude
 
         // Layout
         JPanel panel = new JPanel(new BorderLayout());
