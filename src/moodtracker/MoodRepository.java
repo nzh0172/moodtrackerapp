@@ -38,6 +38,51 @@ public class MoodRepository {
 	    }
 	    return false; // No entry exists for the given date
 	}
+	
+	public void saveOrUpdateMoodEntry(LocalDate currentDate, String mood, String gratitudeText, int rating) throws SQLException {
+	    // Check if there is already an entry for today
+	    if (isEntryExistsForDate(currentDate)) {
+	        // Update the existing entry
+	        updateMoodEntry(currentDate, mood, gratitudeText, rating);
+	    } else {
+	        // Insert a new entry if no entry exists
+	        saveMoodEntry(currentDate, mood, gratitudeText, rating);
+	    }
+	}
+	
+	private void updateMoodEntry(LocalDate date, String mood, String gratitudeText, int rating) throws SQLException {
+	    String sql = "UPDATE moodentries SET mood = ?, rating = ?, gratitude = ? WHERE entryDate = ?";
+	    try (Connection connection = DatabaseConnection.getConnection();
+	         PreparedStatement stmt = connection.prepareStatement(sql)) {
+	        stmt.setString(1, mood);
+	        stmt.setInt(2, rating);
+	        stmt.setString(3, gratitudeText);
+	        stmt.setDate(4, Date.valueOf(date));
+	        stmt.executeUpdate();
+	    }
+	}
+	
+	public Mood getMoodEntryForToday() throws SQLException {
+	    LocalDate currentDate = LocalDate.now();
+	    String sql = "SELECT * FROM moodentries WHERE entryDate = ?";
+	    try (Connection connection = DatabaseConnection.getConnection();
+	         PreparedStatement stmt = connection.prepareStatement(sql)) {
+	        stmt.setDate(1, Date.valueOf(currentDate));
+	        try (ResultSet rs = stmt.executeQuery()) {
+	            if (rs.next()) {
+	                Mood mood = new Mood();
+	                mood.setId(rs.getInt("id"));
+	                mood.setMood(rs.getString("mood"));
+	                mood.setRating(rs.getInt("rating"));
+	                mood.setGratitude(rs.getString("gratitude"));
+	                mood.setDate(rs.getDate("entryDate").toLocalDate());
+	                return mood;
+	            }
+	        }
+	    }
+	    return null; // No entry found for today
+	}
+
 
 
     // Method to get all mood entries
@@ -82,17 +127,15 @@ public class MoodRepository {
         return moods;
     }
     
-    public void deleteMoodEntry(int id) throws SQLException {
-        String sql = "DELETE FROM moodentries WHERE id = ?";
+    public void deleteMoodEntryByDate(LocalDate date) throws SQLException {
+        String sql = "DELETE FROM moodentries WHERE entryDate = ?";
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            int rowsDeleted = stmt.executeUpdate();
-            if (rowsDeleted == 0) {
-                throw new SQLException("No entry found with the given ID.");
-            }
+            stmt.setDate(1, Date.valueOf(date));
+            stmt.executeUpdate();
         }
     }
+
     
     public List<LocalDate> getDatesWithEntries() throws SQLException {
         String sql = "SELECT DISTINCT entryDate FROM moodentries";
@@ -101,7 +144,7 @@ public class MoodRepository {
              Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                dates.add(rs.getDate("date").toLocalDate());
+                dates.add(rs.getDate("entryDate").toLocalDate());
             }
         }
         return dates;

@@ -60,6 +60,8 @@ class MoodTrackerFrame extends JFrame {
         moodComboBox.setRenderer(new ComboBoxRenderer());
         moodPanel.add(moodLabel);
         moodPanel.add(moodComboBox);
+        
+
 
         // Rating slider
         JPanel ratingPanel = new JPanel();
@@ -103,6 +105,20 @@ class MoodTrackerFrame extends JFrame {
         buttonPanel.add(submitButton);
         buttonPanel.add(viewEntriesButton);
         
+        // Fetch today's mood entry and pre-fill the fields if exists
+        MoodRepository moodRepos = new MoodRepository();
+        try {
+            Mood todayMood = moodRepos.getMoodEntryForToday();
+            if (todayMood != null) {
+                // Pre-fill the mood, gratitude, and rating if today's entry exists
+                moodComboBox.setSelectedItem(new IconLabel(todayMood.getMood(), null));  // Adjust as per your IconLabel logic
+                gratitudeTextArea.setText(todayMood.getGratitude());
+                ratingSlider.setValue(todayMood.getRating());
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace(); // Handle SQL exception
+        }
+        
         JButton calendarButton = new JButton("View Calendar");
         calendarButton.addActionListener(e -> SwingUtilities.invokeLater(() -> new CalendarFrame()));
         buttonPanel.add(calendarButton);
@@ -117,6 +133,12 @@ class MoodTrackerFrame extends JFrame {
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(gratitudePanel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        
+        JButton deleteButton = new JButton("Delete Today's Entry");
+        deleteButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        deleteButton.addActionListener(new DeleteAction());  // Add the DeleteAction listener
+
+        mainPanel.add(deleteButton); 
         mainPanel.add(buttonPanel);
 
         // Add main panel to frame
@@ -133,13 +155,39 @@ class MoodTrackerFrame extends JFrame {
 
             MoodRepository moodRepos = new MoodRepository();
 
-            // Pass the data to the repository to save the mood entry
             try {
-                moodRepos.saveMoodEntry(currentDate, selectedMood.getText(), gratitudeText, rating);
-                JOptionPane.showMessageDialog(MoodTrackerFrame.this, "Mood entry saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-                gratitudeTextArea.setText(""); // Clear the text area after submission
+                moodRepos.saveOrUpdateMoodEntry(currentDate, selectedMood.getText(), gratitudeText, rating);
+                JOptionPane.showMessageDialog(MoodTrackerFrame.this, "Mood entry saved/updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                gratitudeTextArea.setText(""); // Clear the text area
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(MoodTrackerFrame.this, "Error saving mood entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private class DeleteAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            LocalDate currentDate = LocalDate.now();
+            MoodRepository moodRepos = new MoodRepository();
+
+            try {
+                int confirmation = JOptionPane.showConfirmDialog(MoodTrackerFrame.this,
+                        "Are you sure you want to delete today's mood entry?",
+                        "Confirm Deletion",
+                        JOptionPane.YES_NO_OPTION);
+                
+                if (confirmation == JOptionPane.YES_OPTION) {
+                    moodRepos.deleteMoodEntryByDate(currentDate);
+                    JOptionPane.showMessageDialog(MoodTrackerFrame.this, "Mood entry for today has been deleted.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    
+                    // Optionally, clear the UI fields after deletion
+                    moodComboBox.setSelectedIndex(0);  // Reset the mood combobox to the first item
+                    gratitudeTextArea.setText("");      // Clear the gratitude text area
+                    ratingSlider.setValue(0);          // Reset the rating slider
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(MoodTrackerFrame.this, "Error deleting mood entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -185,31 +233,6 @@ class ViewEntriesFrame extends JFrame {
 
         // Add Delete Button
         JButton deleteButton = new JButton("Delete Selected Entry");
-        deleteButton.addActionListener(e -> {
-            int selectedRow = table.getSelectedRow();
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "Please select a row to delete.", "Error", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Get the ID of the selected row
-            int id = (int) table.getValueAt(selectedRow, 0);
-
-            // Confirm deletion
-            int confirmation = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this entry?", "Confirm Deletion", JOptionPane.YES_NO_OPTION);
-            if (confirmation != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            // Perform deletion
-            try {
-                new MoodRepository().deleteMoodEntry(id);
-                model.removeRow(selectedRow); // Remove row from the table
-                JOptionPane.showMessageDialog(this, "Mood entry deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error deleting mood entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
 
         // Layout
         JPanel panel = new JPanel(new BorderLayout());
@@ -219,6 +242,8 @@ class ViewEntriesFrame extends JFrame {
         add(panel);
         setVisible(true);
     }
+    
+    
 }
 
 class IconLabel {

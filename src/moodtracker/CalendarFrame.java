@@ -15,11 +15,15 @@ import java.util.Date;
 import java.util.List;
 
 public class CalendarFrame extends JFrame {
-    private JCalendar calendar;
+    private final JCalendar calendar = new JCalendar();
     private JTable table;
     private DefaultTableModel tableModel;
+	public MoodRepository moodRepository;
 
     public CalendarFrame() {
+        this.moodRepository = new MoodRepository();  // Initialize the repository
+
+    	
         // Frame settings
         setTitle("Mood Calendar");
         setSize(800, 600);
@@ -28,7 +32,7 @@ public class CalendarFrame extends JFrame {
         setLayout(new BorderLayout());
 
         // Calendar Component
-        calendar = new JCalendar();
+
         calendar.addPropertyChangeListener("calendar", e -> updateMoodEntries());
         add(calendar, BorderLayout.WEST);
 
@@ -71,30 +75,32 @@ public class CalendarFrame extends JFrame {
     }
 
     private class DeleteActionListener implements ActionListener {
+
+    	
         @Override
         public void actionPerformed(ActionEvent e) {
-            int selectedRow = table.getSelectedRow();
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(CalendarFrame.this, "Please select a row to delete.", "Error", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            // Get the selected date from the JCalendar
+            java.util.Date selectedDate = calendar.getDate();
 
-            // Get the ID of the selected mood entry
-            int id = (int) tableModel.getValueAt(selectedRow, 0);
+            // Convert it to LocalDate
+            LocalDate localDate = new java.sql.Date(selectedDate.getTime()).toLocalDate();
 
-            // Confirm deletion
-            int confirmation = JOptionPane.showConfirmDialog(CalendarFrame.this, "Are you sure you want to delete this entry?", "Confirm Deletion", JOptionPane.YES_NO_OPTION);
-            if (confirmation != JOptionPane.YES_OPTION) {
-                return;
-            }
+            // Show confirmation dialog
+            int confirmation = JOptionPane.showConfirmDialog(CalendarFrame.this,
+                    "Are you sure you want to delete the mood entry for " + localDate + "?",
+                    "Confirm Deletion",
+                    JOptionPane.YES_NO_OPTION);
 
-            try {
-                new MoodRepository().deleteMoodEntry(id);
-                tableModel.removeRow(selectedRow);
-                JOptionPane.showMessageDialog(CalendarFrame.this, "Mood entry deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(CalendarFrame.this, "Error deleting mood entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            if (confirmation == JOptionPane.YES_OPTION) {
+                try {
+                    // Delete mood entry by the selected date
+                    moodRepository.deleteMoodEntryByDate(localDate);
+                    JOptionPane.showMessageDialog(CalendarFrame.this, "Mood entry for " + localDate + " has been deleted.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(CalendarFrame.this, "Error deleting mood entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }
+
 }
