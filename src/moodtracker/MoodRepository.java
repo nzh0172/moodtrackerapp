@@ -127,6 +127,8 @@ public class MoodRepository {
         return moods;
     }
     
+
+    
     public void deleteMoodEntryByDate(LocalDate date) throws SQLException {
         String sql = "DELETE FROM moodentries WHERE entryDate = ?";
         try (Connection connection = DatabaseConnection.getConnection();
@@ -149,6 +151,8 @@ public class MoodRepository {
         }
         return dates;
     }
+    
+    
 
 
 }

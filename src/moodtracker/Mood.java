@@ -8,7 +8,7 @@ public class Mood {
     private int rating;
     private String gratitude;
     private LocalDate date;
-
+    
     // Getters and Setters
     public int getId() {
         return id;
