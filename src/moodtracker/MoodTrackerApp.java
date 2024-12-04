@@ -203,6 +203,9 @@ class MoodTrackerFrame extends JFrame {
 }
 
 class ViewEntriesFrame extends JFrame {
+    private JTable table;
+    private DefaultTableModel tableModel;
+
     public ViewEntriesFrame() throws SQLException {
         // Frame settings
         setTitle("View Mood Entries");
@@ -214,11 +217,6 @@ class ViewEntriesFrame extends JFrame {
         // Get mood entries from the repository
         List<Mood> moods = new MoodRepository().getAllEntries();
 
-        // Check if moods are fetched properly
-        if (moods.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No mood entries found.", "No Data", JOptionPane.INFORMATION_MESSAGE);
-        }
-
         // Prepare data for the table
         Object[][] data = new Object[moods.size()][4];
         for (int i = 0; i < moods.size(); i++) {
@@ -228,27 +226,25 @@ class ViewEntriesFrame extends JFrame {
             data[i][2] = mood.getGratitude(); // Gratitude
             data[i][3] = mood.getRating();    // Rating
         }
-        DefaultTableModel model = new DefaultTableModel(data, columnNames);
-        JTable table = new JTable(model);
+
+        // Initialize tableModel and table
+        tableModel = new DefaultTableModel(data, columnNames);
+        table = new JTable(tableModel);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollPane = new JScrollPane(table);
 
-        // Add Delete Button
-        JButton deleteButton = new JButton("Delete Selected Entry");
-        
-     // Adjust the column widths
-        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        // Adjust the column widths
         TableColumnModel columnModel = table.getColumnModel();
-        
-        // Auto-size all columns except Gratitude
         for (int i = 0; i < columnModel.getColumnCount(); i++) {
             if (i != 2) { // Skip the Gratitude column (index 2)
                 columnModel.getColumn(i).setPreferredWidth(90); // Adjust width for other columns
             }
         }
-
-        // Set a fixed width for the Gratitude column (index 2)
         columnModel.getColumn(2).setPreferredWidth(400); // Set a larger width for Gratitude
+
+        // Add Delete Button
+        JButton deleteButton = new JButton("Delete Selected Entry");
+        deleteButton.addActionListener(e -> deleteSelectedEntry());
 
         // Layout
         JPanel panel = new JPanel(new BorderLayout());
@@ -258,8 +254,29 @@ class ViewEntriesFrame extends JFrame {
         add(panel);
         setVisible(true);
     }
-    
-    
+
+    private void deleteSelectedEntry() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an entry to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Get the date of the selected row
+        LocalDate dateToDelete = LocalDate.parse(tableModel.getValueAt(selectedRow, 0).toString());
+
+        // Delete the entry from the database
+        try {
+            MoodRepository moodRepository = new MoodRepository();
+            moodRepository.deleteMoodEntryByDate(dateToDelete);
+
+            // Remove the row from the table model
+            tableModel.removeRow(selectedRow);
+            JOptionPane.showMessageDialog(this, "Entry deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Error deleting entry: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 }
 
 class IconLabel {
