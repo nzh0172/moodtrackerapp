@@ -1,10 +1,8 @@
 package moodtracker;
 
-
 import com.toedter.calendar.JCalendar;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,17 +14,12 @@ import java.util.List;
 
 public class CalendarFrame extends JFrame {
     private final JCalendar calendar = new JCalendar();
-    private JTable table;
-    private DefaultTableModel tableModel;
-	private MoodRepository moodRepository;
-    private final JLabel moodLabel;
-    private final JLabel gratitudeLabel;
-    private final JLabel ratingLabel;
+    private MoodRepository moodRepository;
+    private final JTextArea infoTextArea;
 
     public CalendarFrame() {
         this.moodRepository = new MoodRepository();  // Initialize the repository
 
-    	
         // Frame settings
         setTitle("Mood Calendar");
         setSize(800, 600);
@@ -35,29 +28,21 @@ public class CalendarFrame extends JFrame {
         setLayout(new BorderLayout());
 
         // Calendar Component
-
-        calendar.addPropertyChangeListener("calendar", e -> updateLabels());
+        calendar.addPropertyChangeListener("calendar", e -> updateTextArea());
         add(calendar, BorderLayout.WEST);
 
-        // Panel for labels
+        // Panel for the JTextArea
         JPanel labelPanel = new JPanel();
-        labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.Y_AXIS));
+        labelPanel.setLayout(new BorderLayout());
 
-        // Mood Label
-        moodLabel = new JLabel("Mood: N/A");
-        moodLabel.setIcon(null);
-        moodLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        labelPanel.add(moodLabel);
-
-        // Gratitude Label
-        gratitudeLabel = new JLabel("Gratitude: N/A");
-        gratitudeLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        labelPanel.add(gratitudeLabel);
-
-        // Rating Label
-        ratingLabel = new JLabel("Rating: N/A");
-        ratingLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        labelPanel.add(ratingLabel);
+        // Info Text Area to display Mood, Gratitude, and Rating
+        infoTextArea = new JTextArea();
+        infoTextArea.setEditable(false); // Make it non-editable
+        infoTextArea.setWrapStyleWord(true); // Word wrap
+        infoTextArea.setLineWrap(true); // Enable line wrapping
+        infoTextArea.setFont(new Font("Arial", Font.PLAIN, 14)); // Set font size
+        infoTextArea.setBackground(getBackground()); // Make background same as panel
+        labelPanel.add(new JScrollPane(infoTextArea), BorderLayout.CENTER); // Add to panel
 
         // Add label panel to frame
         add(labelPanel, BorderLayout.CENTER);
@@ -70,32 +55,7 @@ public class CalendarFrame extends JFrame {
         setVisible(true);
     }
 
-    private void updateMoodEntries() {
-        Date selectedDate = calendar.getDate();
-        LocalDate localDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-
-        try {
-            // Clear the table
-            tableModel.setRowCount(0);
-
-            // Fetch moods for the selected date
-            List<Mood> moods = new MoodRepository().getMoodsByDate(localDate);
-            for (Mood mood : moods) {
-                tableModel.addRow(new Object[]{
-                        mood.getDate(),
-                        mood.getMood(),
-                        mood.getGratitude(),
-                        mood.getRating()
-                });
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error retrieving mood entries: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
     private class DeleteActionListener implements ActionListener {
-
-    	
         @Override
         public void actionPerformed(ActionEvent e) {
             // Get the selected date from the JCalendar
@@ -121,8 +81,8 @@ public class CalendarFrame extends JFrame {
             }
         }
     }
-    
-    private void updateLabels() {
+
+    private void updateTextArea() {
         // Get the selected date from the calendar
         Date selectedDate = calendar.getDate();
         LocalDate localDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -134,56 +94,26 @@ public class CalendarFrame extends JFrame {
             if (!moods.isEmpty()) {
                 Mood mood = moods.get(0); // Assuming only one entry per day
 
-                // Update mood label with icon
-                moodLabel.setText("Mood: " + mood.getMood());
-                moodLabel.setIcon(getMoodIcon(mood.getMood()));
+                // Combine mood, gratitude, and rating into a single text
+                StringBuilder text = new StringBuilder();
+                text.append("Mood: ").append(mood.getMood()).append("\n");
+                text.append("Rating: ").append(getStars(mood.getRating())).append("\n");
+                text.append("Gratitude: ").append("\n").append(mood.getGratitude());
 
-                // Update gratitude label
-                gratitudeLabel.setText("Gratitude: " + mood.getGratitude());
 
-                // Update rating label with stars
-                ratingLabel.setText("Rating: " + getStars(mood.getRating()));
+                // Update the text area
+                infoTextArea.setText(text.toString());
             } else {
-                resetLabels(); // If no mood data for the day
+                resetTextArea(); // If no mood data for the day
             }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Error retrieving mood entries: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            resetLabels();
+            resetTextArea();
         }
     }
 
-    private void resetLabels() {
-        moodLabel.setText("Mood: N/A");
-        moodLabel.setIcon(null);
-        gratitudeLabel.setText("Gratitude: N/A");
-        ratingLabel.setText("Rating: N/A");
-    }
-
-    private Icon getMoodIcon(String mood) {
-        String iconPath;
-        switch (mood.toLowerCase()) {
-            case "happy":
-                iconPath = "/icons/happy.png";
-                break;
-            case "sad":
-                iconPath = "/icons/sad.png";
-                break;
-            case "angry":
-                iconPath = "/icons/angry.png";
-                break;
-            case "excited":
-                iconPath = "/icons/excited.png";
-                break;
-            default:
-                iconPath = "/icons/neutral.png"; // Default icon
-        }
-
-        // Load the icon
-        try {
-            return new ImageIcon(getClass().getResource(iconPath));
-        } catch (Exception e) {
-            return null; // Return no icon if not found
-        }
+    private void resetTextArea() {
+        infoTextArea.setText("No mood entry available for this day.");
     }
 
     private String getStars(int rating) {
@@ -197,5 +127,3 @@ public class CalendarFrame extends JFrame {
         return stars.toString();
     }
 }
-
-
