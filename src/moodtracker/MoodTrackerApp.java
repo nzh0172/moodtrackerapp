@@ -79,7 +79,7 @@ class MoodTrackerFrame extends JFrame {
 
         // Gratitude text box
         JPanel gratitudePanel = new JPanel(new BorderLayout());
-        JLabel gratitudeLabel = new JLabel("I am grateful of:");
+        JLabel gratitudeLabel = new JLabel("I feel/I am grateful of:");
         gratitudeTextArea = new JTextArea(5, 30);
         gratitudeTextArea.setLineWrap(true);
         gratitudeTextArea.setWrapStyleWord(true);
@@ -113,12 +113,12 @@ class MoodTrackerFrame extends JFrame {
             Mood todayMood = moodRepos.getMoodEntryForToday();
             if (todayMood != null) {
                 // Pre-fill the mood, gratitude, and rating if today's entry exists
-                moodComboBox.setSelectedItem(new IconLabel(todayMood.getMood(), null));  // Adjust as per your IconLabel logic
+                moodComboBox.setSelectedItem(new IconLabel(todayMood.getMood(), null)); 
                 gratitudeTextArea.setText(todayMood.getGratitude());
                 ratingSlider.setValue(todayMood.getRating());
             }
         } catch (SQLException ex) {
-            ex.printStackTrace(); // Handle SQL exception
+            ex.printStackTrace();
         }
         
         JButton calendarButton = new JButton("View Calendar");
